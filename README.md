@@ -10,8 +10,8 @@
 
 ## Truffle
 
-### `truffle create contract <NAME CONTRACT>`
+`truffle create contract <NAME CONTRACT>`
 
-### `truffle compile`
+`truffle compile`
 
-### `truffle migrate`
+`truffle migrate`
