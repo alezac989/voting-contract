@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AZ Chain
 pragma solidity ^0.8.11;
 
 contract Survey {

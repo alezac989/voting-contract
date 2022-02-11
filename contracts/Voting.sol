@@ -1,14 +1,16 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: AZ Chain
 pragma solidity ^0.8.11;
+import './model/Candidate.sol';
+import './model/Voter.sol';
 
 contract Voting {
+
     address public contractOwner;
-    address[] public candidateList;
-
-    mapping(address => uint8) public votesReceived;
-
-    address public winner;
+    Candidate[] public candidateList;
+    Candidate public winner;
     uint public winnerVotes;
+
+    Voter[] public voterList;
 
     enum votingStatus {NotStarted, Running, Completed}
     votingStatus public status;
@@ -24,46 +26,89 @@ contract Voting {
         }
     }
 
-    function setStatus() OnlyOwner public {
-        if (status != votingStatus.Completed && status != votingStatus.Running) {
-            status = votingStatus.Running;
-        } else {
-            status = votingStatus.Completed;
+    function startVoting() OnlyOwner public {
+        status = votingStatus.Running;
+    }
+
+
+    function closeVoting() OnlyOwner public {
+        status = votingStatus.Completed;
+    }
+
+    function inviteVoter(address _address, string memory _email) OnlyOwner public {
+
+        require(!isVoterPresent(_address), "Voter Already Present");
+
+        Voter memory newVoter = Voter({
+        __address: _address,
+        email: _email,
+        hasVoted: false
+        });
+
+        voterList.push(newVoter);
+    }
+
+    function registerCandidate(address _address, string memory _email, string memory _description) OnlyOwner public {
+
+        require(!isCandidatePresent(_address), "Candidate Already Present");
+
+        Candidate memory newCandidate = Candidate({
+        __address: _address,
+        email: _email,
+        description: _description,
+        votes: 0,
+        added: true
+        });
+
+        candidateList.push(newCandidate);
+    }
+
+    function vote(address _candidateAddress) public {
+        require(isCandidatePresent(_candidateAddress), "Not a Valid Candidate");
+        require(isVoterPresent(msg.sender), "you weren't invited");
+        require(!hasVoted(msg.sender), "You had already voted");
+        require(status == votingStatus.Running, "Election is not active");
+        for (uint i = 0; i < candidateList.length; i++) {
+            if(candidateList[i].__address == _candidateAddress) {
+                candidateList[i].votes += 1;
+                setHasVoted(msg.sender);
+            }
         }
     }
 
-    function registerCandidates(address _candidate) OnlyOwner public {
-        candidateList.push(_candidate);
+    function setHasVoted(address _voter) private {
+        for (uint i = 0; i < voterList.length; i++) {
+            if (voterList[i].__address == _voter) {
+                voterList[i].hasVoted = true;
+            }
+        }
     }
 
-    function vote(address _candidate) public {
-        require(validateCandidate(_candidate), "Not a Valid Candidate");
-        require(status == votingStatus.Running, "Election is not active");
-        votesReceived[_candidate] = votesReceived[_candidate] + 1;
+    function hasVoted(address _voter) view private returns (bool) {
+        for (uint i = 0; i < voterList.length; i++) {
+            if (voterList[i].__address == _voter) {
+                return voterList[i].hasVoted;
+            }
+        }
+        return false;
     }
 
-    function validateCandidate(address _candidate) view public returns (bool) {
+    function isCandidatePresent(address _candidate) view private returns (bool) {
         for (uint i = 0; i < candidateList.length; i++) {
-            if (candidateList[i] == _candidate) {
+            if (candidateList[i].__address == _candidate) {
                 return true;
             }
         }
         return false;
     }
 
-    function votesCount(address _candidate) public view returns (uint) {
-        require(validateCandidate(_candidate), "Not a Valid Candidate");
-        assert(status == votingStatus.Running);
-        return votesReceived[_candidate];
-    }
-
-    function result() public {
-        require(status == votingStatus.Completed, "Voting is not completed, Result cannot be decleared");
-        for (uint i = 0; i < candidateList.length; i++) {
-            if (votesReceived[candidateList[i]] > winnerVotes) {
-                winnerVotes = votesReceived[candidateList[i]];
-                winner = candidateList[i];
+    function isVoterPresent(address _voter) view private returns (bool) {
+        for (uint i = 0; i < voterList.length; i++) {
+            if (voterList[i].__address == _voter) {
+                return true;
             }
         }
+        return false;
     }
+
 }
